@@ -27,7 +27,6 @@ router.post('/login', urlencodedParser, (req, res) => {
 
 
 
-     let userr = {
          login: login,
          password: cryptPassword.toString('hex')
      }
