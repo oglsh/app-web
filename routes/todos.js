@@ -26,7 +26,6 @@ router.post('/login', urlencodedParser, (req, res) => {
     var cryptPassword = crypto.createHash("sha1").update(password).digest()
 
 
-
          login: login,
          password: cryptPassword.toString('hex')
      }
