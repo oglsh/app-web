@@ -1,9 +1,7 @@
-FROM node:12
-WORKDIR /usr/scr/app
-COPY package*.json ./
+FROM jenkins/jenkins
 
-RUN npm install
-RUN apk add -U subversion
-COPY . .
-EXPOSE 3000
-CMD ["node", "index.js"]
+USER root
+
+RUN curl -sSL https://get.docker.com/ | sh
+
+USER jenkins
