@@ -1,87 +1,27 @@
-# Версия docker-compose от нее зависит какие свойства можно использовать, а какие нет
 version: '3.8'
-# Объявление сервисов
 services:
-  # Имя сервиса
-  dind:
-    # Образ, который будет скачан из docker hub
-    # Тут можно указывать не только docker hub, а любой адрес с которого можно скачать корректный образ docker
-    # Например https://myregistry:5000/v2/ubuntu/tags/list скачает образ с локального репозитория
-    image: docker:dind
-    # Права с которыми будет запущен контейнер
-    user: root
-    # Дает возможность контейнеру взаимодействовать с хостом за пределами своей сущности
-    # По сути абсолютные права ко всем системам хоста
-    privileged: true
-    # Имя контейнера
-    container_name: dind
-    # Метка какой порт прослушивает контейнер
-    # На деле данная команда не публикуется порт, а носит лишь информационный характер
-    expose:
-      - 2375
-    # Сеть в которой находится данный контейнер
-    networks:
-      - jenkins_dind
-    # Переменные окружения, можно гибко настраивать свои сервисы
-    # Например сюда можно писать PORT сервера или уровень логирования, чтобы не менять каждый раз в коде
-    environment:
-      DOCKER_TLS_CERTDIR: ""
-    # По сути общая папка между хостом и контейнером
-    # Способ создать общие данные между 2 и более контейнерами
-    volumes:
-      - ./jenkins_home:/var/jenkins_home
-    # Команда на исполнение при каждом запуске контейнера (аналог CMD в Dockerfile)
-    command: "--insecure-registry nexus:8123"
-
   jenkins:
-    # Взамен image можно использовать build, тогда образ будут браться из Dockerfile
-    # Нужно указывать относительный путь, начиная от места запуска docker-compose.yml
-    # В данном случае Dockerfile лежит в том же месте где и docker-compose.yml, по этому достаточно знака точки
-    build: .
-    user: jenkins
-    container_name: jenkins
-    # Показывает, что этот контейнер нужно запускать только после запуска контейнера dind
-    # Важно понимать что тут указывается не свойство container_name (его может не быть), а название в services
+    image: jenkinsci/blueocean
+    ports:
+      - "8000:8080"
+
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - docker-certs:/certs/client:ro
     depends_on:
-      - dind
-    # Публикует и прокидывает (хост -> контейнер) порт
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - ./jenkins_home:/var/jenkins_home
-      - /usr/bin/docker:/usr/bin/docker
-    environment:
-      DOCKER_HOST: "tcp://dind:2375"
-    networks:
-      - jenkins_dind
-    # Политика перезапуска, сообщает котейнеру что делать в случае сбоя
-    # no - сообщает докеру что контейнер не нужно перезапускать автоматически
-    # always - всегда перезапускает контейнер в случае любых ошибок или ручной остановки
-    # on-failure - перезапускает если ошибки относятся к сбою в работе
-    # unless-stopped - всегда перезапускает контейнер за исключением случаев если контейнер остановлен вручную
-    restart: unless-stopped
+      - docker
 
-  nexus:
-    image: klo2k/nexus3
-    container_name: nexus
+  docker:
+    image: docker:dind
     privileged: true
-    ports:
-      - "8000:8081"
-      - "8123:8123"
+    environment:
+      DOCKER_TLS_CERTDIT: /certs
     volumes:
-      - ./nexus-data:/nexus-data
-    networks:
-      - jenkins_dind
+      - jenkins-data:/var/jenkins_home
+      - docker-certs:/certs/client
+      - docker-data:/var/lib/docker
 
-# Создает сеть внутри докера, сеть создается глобально на всю программу
-networks:
-  # Имя сети
-  jenkins_dind:
-    # Система docker работает на специальных драйверах
-    # bridge - взаимодействие между автономными контейнерами
-    # host - удаляет сетевую изоляцию между хостом и контейнером, это дает возможность использовать один и тот же порт только для одного контейнера
-    # none - отсутствие сети
-    # macvlan - можно указать mac-адрес сетевому интерфейсу каждого контейнера
-    # overlay - взаимодействие между демонами докера
-    driver: bridge
+volumes:
+  jenkins-data:
+  docker-certs:
+  docker-data:
